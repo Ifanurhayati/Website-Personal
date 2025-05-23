@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Arrange Galvanic Cells!</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+            width: 100%;
+            backdrop-filter: blur(10px);
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .instruction {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 1.1em;
+        }
+
+        .cells-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            justify-content: center;
+            margin-bottom: 30px;
+            min-height: 120px;
+            padding: 20px;
+            border: 3px dashed #ccc;
+            border-radius: 15px;
+            background: rgba(240, 248, 255, 0.5);
+        }
+
+        .drop-zones {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .drop-zone {
+            width: 140px;
+            height: 100px;
+            border: 3px dashed #888;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255, 255, 255, 0.7);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+
+        .drop-zone.drag-over {
+            border-color: #4CAF50;
+            background: rgba(76, 175, 80, 0.1);
+            transform: scale(1.05);
+        }
+
+        .drop-zone::before {
+            content: attr(data-label);
+            position: absolute;
+            top: -25px;
+            font-size: 0.9em;
+            color: #666;
+            font-weight: bold;
+        }
+
+        .cell {
+            width: 120px;
+            height: 80px;
+            background: linear-gradient(45deg, #ff6b6b, #ffa500);
+            border: 2px solid #333;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            user-select: none;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        .cell:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        .cell:active {
+            cursor: grabbing;
+            transform: rotate(5deg);
+        }
+
+        .cell.dragging {
+            opacity: 0.7;
+            transform: rotate(5deg) scale(1.1);
+            z-index: 1000;
+        }
+
+        .cell-name {
+            font-weight: bold;
+            font-size: 0.9em;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .cell-voltage {
+            font-size: 0.8em;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .controls {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1em;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .reset-btn {
+            background: linear-gradient(45deg, #ff6b6b, #ff5252);
+        }
+
+        .message {
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 20px 0;
+            padding: 15px;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .success {
+            background: rgba(76, 175, 80, 0.2);
+            color: #2e7d32;
+            border: 2px solid #4CAF50;
+        }
+
+        .info {
+            background: rgba(33, 150, 243, 0.2);
+            color: #1565c0;
+            border: 2px solid #2196F3;
+        }
+
+        @keyframes celebrate {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            25% { transform: scale(1.1) rotate(5deg); }
+            75% { transform: scale(1.1) rotate(-5deg); }
+        }
+
+        .celebrate {
+            animation: celebrate 0.6s ease-in-out;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <h1>⚡ Arrange Galvanic Cells! ⚡</h1>
+        <p class="instruction">
+            Drag the galvanic cells to arrange them from <strong>lowest to highest voltage</strong>!
+        </p>
+
+        <div class="cells-container" id="cellsContainer">
+            <div class="cell" draggable="true" data-voltage="0.34">
+                <div class="cell-name">Cu²⁺/Cu</div>
+                <div class="cell-voltage">+0.34V</div>
+            </div>
+            <div class="cell" draggable="true" data-voltage="1.36">
+                <div class="cell-name">Cl₂/Cl⁻</div>
+                <div class="cell-voltage">+1.36V</div>
+            </div>
+            <div class="cell" draggable="true" data-voltage="-0.76">
+                <div class="cell-name">Zn²⁺/Zn</div>
+                <div class="cell-voltage">-0.76V</div>
+            </div>
+            <div class="cell" draggable="true" data-voltage="0.80">
+                <div class="cell-name">Ag⁺/Ag</div>
+                <div class="cell-voltage">+0.80V</div>
+            </div>
+            <div class="cell" draggable="true" data-voltage="-2.37">
+                <div class="cell-name">Mg²⁺/Mg</div>
+                <div class="cell-voltage">-2.37V</div>
+            </div>
+        </div>
+
+        <div class="drop-zones" id="dropZones">
+            <div class="drop-zone" data-label="1st (Lowest)" data-position="0"></div>
+            <div class="drop-zone" data-label="2nd" data-position="1"></div>
+            <div class="drop-zone" data-label="3rd" data-position="2"></div>
+            <div class="drop-zone" data-label="4th" data-position="3"></div>
+            <div class="drop-zone" data-label="5th (Highest)" data-position="4"></div>
+        </div>
+
+        <div class="controls">
+            <button onclick="checkAnswer()">Check Answer</button>
+            <button onclick="resetGame()" class="reset-btn">Reset Game</button>
+        </div>
+
+        <div id="message" class="message" style="display: none;"></div>
+    </div>
+
+    <script>
+        let draggedElement = null;
+        let gameData = [];
+
+        // Initialize the game
+        function initGame() {
+            const cells = document.querySelectorAll('.cell');
+            const dropZones = document.querySelectorAll('.drop-zone');
+            
+            // Reset game data
+            gameData = Array(5).fill(null);
+            
+            // Shuffle cells
+            shuffleCells();
+            
+            // Add drag event listeners to cells
+            cells.forEach(cell => {
+                cell.addEventListener('dragstart', handleDragStart);
+                cell.addEventListener('dragend', handleDragEnd);
+            });
+            
+            // Add drop event listeners to zones
+            dropZones.forEach(zone => {
+                zone.addEventListener('dragover', handleDragOver);
+                zone.addEventListener('drop', handleDrop);
+                zone.addEventListener('dragenter', handleDragEnter);
+                zone.addEventListener('dragleave', handleDragLeave);
+            });
+            
+            hideMessage();
+        }
+
+        function shuffleCells() {
+            const container = document.getElementById('cellsContainer');
+            const cells = Array.from(container.children);
+            
+            // Fisher-Yates shuffle
+            for (let i = cells.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [cells[i], cells[j]] = [cells[j], cells[i]];
+            }
+            
+            // Append shuffled cells back to container
+            cells.forEach(cell => container.appendChild(cell));
+        }
+
+        function handleDragStart(e) {
+            draggedElement = e.target;
+            e.target.classList.add('dragging');
+        }
+
+        function handleDragEnd(e) {
+            e.target.classList.remove('dragging');
+            draggedElement = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+        }
+
+        function handleDragEnter(e) {
+            e.target.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.target.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.target.classList.remove('drag-over');
+            
+            if (draggedElement) {
+                const position = parseInt(e.target.dataset.position);
+                
+                // If zone already has a cell, move it back
+                if (gameData[position]) {
+                    document.getElementById('cellsContainer').appendChild(gameData[position]);
+                }
+                
+                // Place the dragged cell in the drop zone
+                e.target.appendChild(draggedElement);
+                gameData[position] = draggedElement;
+            }
+        }
+
+        function checkAnswer() {
+            // Check if all zones are filled
+            if (gameData.includes(null)) {
+                showMessage('Please place all cells in the drop zones!', 'info');
+                return;
+            }
+            
+            // Get the correct order (sorted by voltage)
+            const correctOrder = [-2.37, -0.76, 0.34, 0.80, 1.36];
+            
+            // Check if the arrangement is correct
+            let isCorrect = true;
+            for (let i = 0; i < gameData.length; i++) {
+                const cellVoltage = parseFloat(gameData[i].dataset.voltage);
+                if (cellVoltage !== correctOrder[i]) {
+                    isCorrect = false;
+                    break;
+                }
+            }
+            
+            if (isCorrect) {
+                showMessage('🎉 Excellent! You arranged the galvanic cells correctly! 🎉', 'success');
+                // Add celebration animation
+                document.querySelector('.game-container').classList.add('celebrate');
+                setTimeout(() => {
+                    document.querySelector('.game-container').classList.remove('celebrate');
+                }, 600);
+            } else {
+                showMessage('Not quite right. Remember: arrange from lowest to highest voltage!', 'info');
+            }
+        }
+
+        function resetGame() {
+            // Move all cells back to container
+            const container = document.getElementById('cellsContainer');
+            gameData.forEach(cell => {
+                if (cell) {
+                    container.appendChild(cell);
+                }
+            });
+            
+            // Reset game data
+            gameData = Array(5).fill(null);
+            
+            // Shuffle cells again
+            shuffleCells();
+            
+            hideMessage();
+        }
+
+        function showMessage(text, type) {
+            const messageEl = document.getElementById('message');
+            messageEl.textContent = text;
+            messageEl.className = message ${type};
+            messageEl.style.display = 'block';
+        }
+
+        function hideMessage() {
+            document.getElementById('message').style.display = 'none';
+        }
+
+        // Initialize the game when page loads
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
